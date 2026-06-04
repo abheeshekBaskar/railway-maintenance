@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend — Install & Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install backend deps
+        working-directory: backend
+        run: npm install
+      - name: Verify entry point
+        working-directory: backend
+        run: node -e "require('./src/config/db'); console.log('Config OK')"
+        env:
+          DB_HOST: localhost
+          DB_USER: rmadmin
+          DB_PASSWORD: rmpassword
+          DB_NAME: railway_test
+          JWT_SECRET: test_secret
+
+  frontend:
+    name: Frontend — Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm install
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: /api
+        run: npm run build
+
+  docker:
+    name: Docker Compose — Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config

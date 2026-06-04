@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: rm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rmadmin
+      POSTGRES_PASSWORD: rmpassword
+      POSTGRES_DB: railway_maintenance
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rmadmin -d railway_maintenance']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rm_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: rmadmin
+      DB_PASSWORD: rmpassword
+      DB_NAME: railway_maintenance
+      JWT_SECRET: railwayjwtsecret_change_in_production
+      JWT_EXPIRES_IN: 7d
+    ports:
+      - '5001:5001'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rm_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5001/api
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:

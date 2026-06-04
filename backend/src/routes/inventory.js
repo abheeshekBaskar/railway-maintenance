@@ -1,0 +1,10 @@
+const r = require('express').Router();
+const c = require('../controllers/mainControllers');
+const { authenticate, authorize } = require('../middleware/auth');
+r.use(authenticate);
+r.get('/', c.getAllInventory);
+r.get('/low-stock', c.getLowStock);
+r.post('/', authorize('admin','operator'), c.createInventory);
+r.put('/:id', authorize('admin','operator'), c.updateInventory);
+r.post('/:id/restock', authorize('admin','operator'), c.restockInventory);
+module.exports = r;
